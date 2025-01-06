@@ -18,9 +18,17 @@ def initial_message(persona: str, Authorize: AuthJWT = Depends()):
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid token or token expired or invalid input")
     
-@router.post("/chat")
-def get_chat_response(request: ChatRequest):
+@router.post("/chat/{persona}")
+def get_chat_response(request: ChatRequest, persona: str, Authorize: AuthJWT = Depends()):
     if not request.user_message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
-    response = generate_persona_response(request.user_message)
-    return {"response": response}
+    try:
+        Authorize.jwt_required()
+        current_user = Authorize.get_jwt_subject()
+        print(current_user)
+        response = generate_persona_response(request.user_message, current_user, persona)
+        return {"response": response[0], "scores":response[1], "feedback": response[2]}
+    except CustomError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid token or token expired or invalid input")

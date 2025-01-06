@@ -11,7 +11,7 @@ router = APIRouter()
 @router.post("/register", response_model=UserResponse)
 def register(user: User):
     existing_user = db["users"].find_one({"username": user.username})
-    if existing_user:
+    if (existing_user):
         raise HTTPException(status_code=400, detail="Username already exists")
 
     hashed_password = hash_password(user.password)
@@ -28,3 +28,14 @@ def login(user: User, Authorize: AuthJWT = Depends()):
 
     access_token = Authorize.create_access_token(subject=user.username)
     return {"access_token": access_token}
+
+# Get User Profile
+@router.get("/profile", response_model=UserResponse)
+def get_profile(Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    current_user = Authorize.get_jwt_subject()
+    user = db["users"].find_one({"username": current_user})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {"username": user["username"], "scores": user.get("scores", {})}
